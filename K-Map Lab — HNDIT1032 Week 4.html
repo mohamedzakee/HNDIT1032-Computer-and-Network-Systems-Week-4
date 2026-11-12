@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K-Map Lab — HNDIT1032 Week 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f4ee; --card:#ffffff; --ink:#1b2130; --muted:#5d6577; --line:#d9d5c9;
+  --accent:#0f766e; --accent-soft:#e3f2ef; --amber:#c2410c; --amber-soft:#fdf0e6;
+  --good:#15803d; --good-soft:#e7f5ea; --bad:#b91c1c; --bad-soft:#fbeaea;
+  --cs:64px; --radius:14px;
+  --head:'Space Grotesk',system-ui,sans-serif; --body:'Plus Jakarta Sans',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--body);background:var(--paper);color:var(--ink);line-height:1.55;font-size:16px}
+header.top{background:var(--ink);color:#f3f1ea;padding:22px 20px 0}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header.top .wrap{padding:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8fd3c9}
+h1{font-family:var(--head);font-size:clamp(26px,4vw,38px);margin:4px 0 6px;letter-spacing:-.01em}
+.sub{color:#c9c6bc;margin:0 0 18px;max-width:640px}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs a{color:#c9c6bc;text-decoration:none;padding:10px 16px;border-radius:10px 10px 0 0;font-weight:600;font-size:15px;white-space:nowrap}
+nav.tabs a:hover{color:#fff}
+nav.tabs a.on{background:var(--paper);color:var(--ink)}
+main{padding:28px 0 60px}
+section.view{display:none}
+section.view.on{display:block}
+h2{font-family:var(--head);font-size:26px;margin:0 0 6px;letter-spacing:-.01em}
+h3{font-family:var(--head);font-size:19px;margin:0 0 8px}
+p.lead{color:var(--muted);margin:0 0 22px;max-width:720px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:18px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.row{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono)}
+.bar{text-decoration:overline;text-decoration-thickness:1.5px;text-underline-offset:0}
+.expr{font-family:var(--mono);font-weight:700;font-size:18px}
+.pill{display:inline-block;font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-weight:700}
+button,.btn{font-family:var(--body);font-weight:600;font-size:14px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 14px;border-radius:10px;cursor:pointer;transition:.15s}
+button:hover{border-color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{background:#0b5d56}
+button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+input[type=text]{font-family:var(--mono);font-size:15px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;min-width:0;flex:1;background:#fff;color:var(--ink)}
+input[type=text]:focus{outline:2px solid var(--accent);border-color:transparent}
+.msg{padding:10px 14px;border-radius:10px;margin-top:12px;font-size:15px}
+.msg.good{background:var(--good-soft);color:var(--good)}
+.msg.bad{background:var(--bad-soft);color:var(--bad)}
+.msg.info{background:var(--amber-soft);color:var(--amber)}
+.msg:empty{display:none}
+
+/* K-map */
+.kmap{display:inline-grid;grid-template-columns:52px repeat(var(--cols),var(--cs));grid-template-rows:40px repeat(var(--rows),var(--cs));user-select:none}
+.kmap.sm{--cs:40px}
+.kmap.lg{--cs:72px}
+.kmap .corner{position:relative;grid-column:1;grid-row:1}
+.kmap .corner svg{position:absolute;inset:0;width:100%;height:100%}
+.kmap .corner .cv{position:absolute;right:4px;top:0;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent)}
+.kmap .corner .rv{position:absolute;left:4px;bottom:2px;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--amber)}
+.kmap .colh,.kmap .rowh{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:700}
+.kmap .colh{color:var(--accent);align-items:flex-end;padding-bottom:4px}
+.kmap .rowh{color:var(--amber);justify-content:flex-end;padding-right:10px}
+.kmap .cells{grid-column:2/-1;grid-row:2/-1;display:grid;grid-template-columns:repeat(var(--cols),var(--cs));grid-template-rows:repeat(var(--rows),var(--cs));position:relative;outline:2px solid var(--ink);border-radius:3px;background:#fff}
+.kmap .cell{border-right:1px solid #b9b4a6;border-bottom:1px solid #b9b4a6;display:flex;align-items:center;justify-content:center;position:relative;font-family:var(--mono);font-weight:700;font-size:calc(var(--cs) * .36);transition:background .15s}
+.kmap .cell.lc{border-right:0}.kmap .cell.lr{border-bottom:0}
+.kmap .cell .v0{color:#c4bfb1;font-weight:500}
+.kmap .cell .m{position:absolute;left:4px;top:2px;font-size:10px;color:#9a9484;font-weight:500}
+.kmap.sm .cell .m{display:none}
+.kmap .cell.click{cursor:pointer}
+.kmap .cell.click:hover{background:#f3f0e6}
+.kmap .cell.sel{background:#fde7c8}
+.kmap .cell.hl{background:#d6efe9}
+.kmap .cell.nb{background:#fef3c7}
+.kmap .cell.dim{opacity:.35}
+.kmap svg.ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.kmap svg.ov .grp{animation:pop .35s ease-out}
+@keyframes pop{from{opacity:0}to{opacity:1}}
+
+/* truth table */
+table.tt{border-collapse:collapse;font-family:var(--mono);font-size:14px}
+table.tt th,table.tt td{padding:4px 10px;text-align:center;border-bottom:1px solid #ebe7dc}
+table.tt th{font-weight:700;color:var(--muted);border-bottom:2px solid var(--ink)}
+table.tt tr.hl td{background:#d6efe9}
+table.tt tr.one td.out{color:var(--accent);font-weight:700}
+table.tt td.mn{color:#9a9484}
+
+.info{min-height:110px}
+.info .big{font-family:var(--mono);font-size:22px;font-weight:700}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:10px}
+.sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px}
+
+/* rules */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.rule h3{display:flex;gap:10px;align-items:baseline}
+.rule .num{font-family:var(--mono);background:var(--ink);color:#fff;border-radius:8px;padding:0 8px;font-size:14px}
+.pair{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}
+.pair figure{margin:0}
+.pair figcaption{font-size:13px;font-weight:700;margin-top:6px}
+.pair figcaption.w{color:var(--bad)}.pair figcaption.r{color:var(--good)}
+.pair figcaption span{font-weight:500;color:var(--muted);display:block}
+
+/* examples */
+.exlist{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.stepbox{min-height:150px}
+.steps-nav{display:flex;gap:10px;align-items:center;margin-top:14px}
+.dots{display:flex;gap:6px}
+.dots i{width:9px;height:9px;border-radius:50%;background:var(--line);display:block}
+.dots i.on{background:var(--accent)}
+table.conv{border-collapse:collapse;font-family:var(--mono);font-size:14px;margin:8px 0}
+table.conv td,table.conv th{padding:4px 12px;border-bottom:1px solid #ebe7dc;text-align:left}
+.glist{list-style:none;padding:0;margin:8px 0}
+.glist li{padding:8px 10px;border-radius:10px;margin-bottom:6px;background:#faf8f2;display:flex;gap:10px;align-items:flex-start}
+.glist .chip{width:12px;height:12px;border-radius:4px;flex:none;margin-top:6px}
+.vtab{font-family:var(--mono);font-size:13px;margin-top:4px;color:var(--muted)}
+.vtab b{color:var(--ink)}
+
+/* quiz */
+.q{font-size:17px;font-weight:600;margin-bottom:12px}
+.opts{display:grid;gap:8px}
+.opts button{text-align:left;padding:12px 14px;font-weight:500;font-size:15px}
+.opts button.right{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.opts button.wrong{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.progress{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:16px}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.score{font-family:var(--head);font-size:48px;font-weight:700}
+footer{color:var(--muted);font-size:13px;text-align:center;padding:20px}
+@media (max-width:560px){ :root{--cs:52px} .kmap.lg{--cs:58px} .card{padding:16px} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">HNDIT1032 · Computer and Network Systems · Week 4</div>
+    <h1>K-Map Lab</h1>
+    <p class="sub">Learn, see and practise Karnaugh-map simplification. Draw maps, circle groups and check your answers instantly.</p>
+    <nav class="tabs" id="tabs">
+      <a href="#learn" data-v="learn">1 · Learn</a>
+      <a href="#rules" data-v="rules">2 · Rules</a>
+      <a href="#examples" data-v="examples">3 · Examples</a>
+      <a href="#playground" data-v="playground">4 · Playground</a>
+      <a href="#practice" data-v="practice">5 · Practice</a>
+      <a href="#quiz" data-v="quiz">6 · Quiz</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- LEARN -->
+<section class="view" id="v-learn">
+  <h2>What is a Karnaugh map?</h2>
+  <p class="lead">A K-map is a truth table redrawn as a grid. Neighbouring cells differ by exactly one variable, so when you circle neighbouring 1s, that variable cancels out (XY + XY' = X). It replaces awkward Boolean algebra with a picture.</p>
+
+  <div class="card">
+    <h3>Anatomy of a map</h3>
+    <p class="muted" style="margin-top:0">Hover or tap any cell. Each cell is one row of the truth table (one minterm). n variables give 2<sup>n</sup> cells.</p>
+    <div class="row" style="margin-bottom:14px">
+      <div class="seg" id="an-n"><button data-n="2">2 variables · 4 cells</button><button data-n="3" class="on">3 variables · 8 cells</button></div>
+    </div>
+    <div class="row">
+      <div id="an-map"></div>
+      <div id="an-tt"></div>
+      <div class="info card" id="an-info" style="flex:1;min-width:220px;margin:0;background:#faf8f2"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Why the labels go 00, 01, 11, 10 (Gray code)</h3>
+    <p class="muted" style="margin-top:0">Tap a cell. Its true neighbours (minterms that differ by one bit) light up yellow. In Gray order they always sit next to it, counting wrap-around from the left edge to the right edge. Switch to binary order and see the adjacency break.</p>
+    <div class="row" style="margin-bottom:14px">
+      <div class="seg" id="gc-order"><button data-o="gray" class="on">Gray order 00 01 11 10 ✓</button><button data-o="bin">Binary order 00 01 10 11 ✗</button></div>
+    </div>
+    <div class="row">
+      <div id="gc-map"></div>
+      <div id="gc-info" style="flex:1;min-width:240px"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Reading a group in one sentence</h3>
+    <p style="margin:0">Look along the group. A variable that is <b>always 1</b> stays as itself (A). A variable that is <b>always 0</b> stays complemented (<span class="bar">A</span>). A variable that <b>changes</b> is dropped. Then OR the group terms together.</p>
+    <div class="legend"><span><span class="sw" style="background:var(--amber)"></span>Row variable(s)</span><span><span class="sw" style="background:var(--accent)"></span>Column variable(s)</span><span>Notation: <span class="bar mono">A</span> = A' = NOT A</span></div>
+  </div>
+</section>
+
+<!-- RULES -->
+<section class="view" id="v-rules">
+  <h2>The 8 rules of simplification</h2>
+  <p class="lead">Every correct grouping obeys all eight. Each card shows a wrong attempt next to the right one.</p>
+  <div class="rules" id="rules"></div>
+</section>
+
+<!-- EXAMPLES -->
+<section class="view" id="v-examples">
+  <h2>Worked examples</h2>
+  <p class="lead">Examples 1–5 are from the lecture slides; A and B are extra. Step through each one.</p>
+  <div class="exlist" id="exlist"></div>
+  <div class="card">
+    <div class="row">
+      <div id="ex-map"></div>
+      <div style="flex:1;min-width:260px">
+        <div class="pill" id="ex-tag"></div>
+        <h3 style="margin-top:8px" id="ex-title"></h3>
+        <div class="stepbox" id="ex-step"></div>
+        <div class="steps-nav">
+          <button id="ex-prev">← Back</button>
+          <button class="primary" id="ex-next">Next step →</button>
+          <div class="dots" id="ex-dots"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PLAYGROUND -->
+<section class="view" id="v-playground">
+  <h2>Playground</h2>
+  <p class="lead">Type an expression or a minterm list, or click cells to flip them between 0 and 1. The map is solved live, with each group explained.</p>
+  <div class="card">
+    <div class="row" style="align-items:center;margin-bottom:12px">
+      <div class="seg" id="pg-n"><button data-n="2">2 vars</button><button data-n="3" class="on">3 vars</button><button data-n="4">4 vars (bonus)</button></div>
+      <button id="pg-clear">Clear</button>
+      <button id="pg-rand">Random</button>
+    </div>
+    <form class="row" id="pg-form" style="align-items:center;gap:10px">
+      <input type="text" id="pg-in" placeholder="e.g.  A'B'C + A'BC   or   Σm(1,3,5,7)   or   1,3,5,7" autocomplete="off" spellcheck="false">
+      <button class="primary" type="submit">Load</button>
+    </form>
+    <div class="muted" style="font-size:13px;margin-top:6px">Write NOT as A' (or ~A). AND is just letters side by side, OR is +.</div>
+    <div class="msg" id="pg-msg"></div>
+  </div>
+  <div class="card">
+    <div class="row">
+      <div id="pg-map"></div>
+      <div style="flex:1;min-width:260px">
+        <div class="muted" style="font-size:13px;font-weight:600">MINIMAL EXPRESSION</div>
+        <div class="expr" id="pg-ans" style="font-size:24px;margin:4px 0 10px"></div>
+        <ul class="glist" id="pg-groups"></ul>
+      </div>
+      <div id="pg-tt"></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRACTICE -->
+<section class="view" id="v-practice">
+  <h2>Practice: group it yourself</h2>
+  <p class="lead">Tap cells to select a group, then press <b>Add group</b>. The lab checks each group against the rules. When every 1 is covered, check your answer.</p>
+  <div class="card">
+    <div class="row" style="align-items:center">
+      <div class="seg" id="pr-lvl"><button data-n="2">Easy · 2 vars</button><button data-n="3" class="on">Medium · 3 vars</button><button data-n="4">Challenge · 4 vars</button></div>
+      <button class="primary" id="pr-new">New problem</button>
+      <span class="muted" id="pr-streak"></span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="muted" style="font-size:13px;font-weight:600;margin-bottom:6px">SIMPLIFY</div>
+        <div class="expr" id="pr-q" style="margin-bottom:14px"></div>
+        <div id="pr-map"></div>
+      </div>
+      <div style="flex:1;min-width:260px">
+        <div class="row" style="gap:8px">
+          <button class="primary" id="pr-add">Add group</button>
+          <button id="pr-clearsel">Clear selection</button>
+          <button id="pr-undo">Undo group</button>
+        </div>
+        <div class="msg" id="pr-gmsg"></div>
+        <ul class="glist" id="pr-groups"></ul>
+        <div class="muted" style="font-size:13px;font-weight:600">YOUR EXPRESSION</div>
+        <div class="expr" id="pr-yours" style="margin:4px 0 12px">—</div>
+        <div class="row" style="gap:8px">
+          <button class="primary" id="pr-check">Check my answer</button>
+          <button id="pr-show">Show solution</button>
+        </div>
+        <div class="msg" id="pr-msg"></div>
+        <details style="margin-top:16px">
+          <summary style="cursor:pointer;font-weight:600">Or type your answer instead</summary>
+          <form class="row" id="pr-form" style="gap:8px;margin-top:10px">
+            <input type="text" id="pr-in" placeholder="e.g. A'C + AB" autocomplete="off" spellcheck="false">
+            <button type="submit">Check</button>
+          </form>
+          <div class="msg" id="pr-tmsg"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section class="view" id="v-quiz">
+  <h2>Quick quiz</h2>
+  <p class="lead">14 questions covering the whole week. You get an explanation after each answer.</p>
+  <div class="card" id="quiz"></div>
+</section>
+
+</main>
+<footer>K-Map Lab · HNDIT1032 Computer and Network Systems · Week 4: Karnaugh Maps · Next week: drawing circuits</footer>
+
+<script>
+"use strict";
+const VARS='ABCD';
+const COLORS=['#0f766e','#c2410c','#7c3aed','#db2777','#2563eb','#65a30d','#b45309','#0891b2'];
+const $=s=>document.querySelector(s);
+const h=(tag,attrs={},html='')=>{const e=document.createElement(tag);for(const k in attrs){if(k==='class')e.className=attrs[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k]);}if(html!==undefined)e.innerHTML=html;return e;};
+
+/* ---------- core logic ---------- */
+function layout(n,order='gray'){
+  const rv=n===4?2:1, cv=n-rv;
+  const seq=k=>k===1?['0','1']:(order==='gray'?['00','01','11','10']:['00','01','10','11']);
+  return {n,rv,cv,rows:seq(rv),cols:seq(cv),rowVars:VARS.slice(0,rv),colVars:VARS.slice(rv,n)};
+}
+const bin=(m,n)=>m.toString(2).padStart(n,'0');
+const mAt=(L,r,c)=>parseInt(L.rows[r]+L.cols[c],2);
+function posOf(L,m){const b=bin(m,L.n);return {r:L.rows.indexOf(b.slice(0,L.rv)),c:L.cols.indexOf(b.slice(L.rv))};}
+function matches(cube,m){const b=bin(m,cube.length);for(let i=0;i<cube.length;i++)if(cube[i]!=='-'&&cube[i]!==b[i])return false;return true;}
+function cubeMins(cube){const n=cube.length,out=[];for(let m=0;m<(1<<n);m++)if(matches(cube,m))out.push(m);return out;}
+function allCubes(n){let o=[''];for(let i=0;i<n;i++){const x=[];for(const s of o)for(const c of '01-')x.push(s+c);o=x;}return o;}
+const contains=(d,c)=>[...d].every((ch,i)=>ch==='-'||ch===c[i]);
+const lits=c=>[...c].filter(x=>x!=='-').length;
+function combos(arr,k,start=0,pre=[],out=[]){if(pre.length===k){out.push(pre.slice());return out;}for(let i=start;i<arr.length;i++){pre.push(arr[i]);combos(arr,k,i+1,pre,out);pre.pop();}return out;}
+function implicants(n,ones){return allCubes(n).filter(c=>cubeMins(c).every(m=>ones.has(m)));}
+function primes(n,ones){const im=implicants(n,ones);return im.filter(c=>!im.some(d=>d!==c&&contains(d,c)));}
+function solve(n,ones){
+  if(ones.size===0)return [];
+  if(ones.size===(1<<n))return ['-'.repeat(n)];
+  const P=primes(n,ones);
+  const ess=new Set();
+  for(const m of ones){const cov=P.filter(p=>matches(p,m));if(cov.length===1)ess.add(cov[0]);}
+  const covered=new Set();for(const e of ess)cubeMins(e).forEach(m=>covered.add(m));
+  const left=[...ones].filter(m=>!covered.has(m));
+  let best=[];
+  if(left.length){
+    const rest=P.filter(p=>!ess.has(p)&&cubeMins(p).some(m=>left.includes(m)));
+    outer: for(let k=1;k<=rest.length;k++){
+      let found=null;
+      for(const cmb of combos(rest,k)){
+        if(left.every(m=>cmb.some(p=>matches(p,m)))){
+          const L=cmb.reduce((a,p)=>a+lits(p),0);
+          if(!found||L<found.L)found={cmb,L};
+        }
+      }
+      if(found){best=found.cmb;break outer;}
+    }
+  }
+  return [...ess,...best].sort((a,b)=>lits(a)-lits(b)||(a<b?-1:1));
+}
+function termHTML(cube){
+  if(/^-+$/.test(cube))return '1';
+  let s='';for(let i=0;i<cube.length;i++){if(cube[i]==='1')s+=VARS[i];else if(cube[i]==='0')s+=`<span class="bar">${VARS[i]}</span>`;}return s;
+}
+function termTXT(cube){if(/^-+$/.test(cube))return '1';let s='';for(let i=0;i<cube.length;i++){if(cube[i]==='1')s+=VARS[i];else if(cube[i]==='0')s+=VARS[i]+"'";}return s;}
+function exprHTML(cubes,ones){if(!cubes.length)return '0';return cubes.map(termHTML).join(' + ');}
+function mintermHTML(m,n){return termHTML(bin(m,n));}
+
+/* parse "A'B + C" or "Σm(1,3)" ; returns {n, ones:Set} */
+function parseInput(str,n){
+  str=str.trim();
+  if(!str)throw new Error('Type something first.');
+  if(!/[a-dA-D]/.test(str.replace(/sum/ig,''))&&/\d/.test(str)){
+    const nums=(str.match(/\d+/g)||[]).map(Number);
+    const mx=Math.max(...nums);
+    let need=n; while((1<<need)<=mx)need++;
+    if(need>4)throw new Error('Minterm numbers must be 0–15 (up to 4 variables).');
+    return {n:need,ones:new Set(nums)};
+  }
+  const s=str.replace(/[’`´′]/g,"'").replace(/\s+/g,'').replace(/[·*.∙&]/g,'').toUpperCase().replace(/\|/g,'+');
+  if(/[^ABCD'~!¬+01()]/.test(s))throw new Error("Only use the letters A–D, ' for NOT, and + for OR.");
+  const terms=s.replace(/[()]/g,'').split('+');
+  let maxv=-1;const parsed=[];
+  for(const t of terms){
+    if(t==='')throw new Error('There is an empty term (check your + signs).');
+    if(t==='1'){parsed.push([]);continue;}
+    if(t==='0'){parsed.push(null);continue;}
+    const lit=[];let neg=false;
+    for(let i=0;i<t.length;i++){
+      const ch=t[i];
+      if(ch==='~'||ch==='!'||ch==='¬'){neg=!neg;continue;}
+      if('ABCD'.includes(ch)){let ng=neg;neg=false;while(t[i+1]==="'"){ng=!ng;i++;}const v='ABCD'.indexOf(ch);maxv=Math.max(maxv,v);lit.push([v,ng]);continue;}
+      throw new Error(`Could not read "${t}".`);
+    }
+    if(neg)throw new Error('A NOT sign is not followed by a letter.');
+    parsed.push(lit);
+  }
+  const need=Math.max(n,maxv+1);
+  const ones=new Set();
+  for(let m=0;m<(1<<need);m++){
+    const b=bin(m,need);
+    if(parsed.some(lit=>lit&&lit.every(([v,ng])=>(b[v]==='1')!==ng)))ones.add(m);
+  }
+  return {n:need,ones};
+}
+
+/* ---------- map renderer ---------- */
+function segments(idx,len){
+  const s=[...new Set(idx)].sort((a,b)=>a-b);const out=[];let st=s[0],pr=s[0];
+  for(let i=1;i<s.length;i++){if(s[i]===pr+1){pr=s[i];continue;}out.push([st,pr]);st=pr=s[i];}
+  out.push([st,pr]);return out;
+}
+function renderMap(el,o){
+  const n=o.n,L=layout(n,o.order||'gray'),R=L.rows.length,C=L.cols.length;
+  const vals=o.values||[];
+  el.innerHTML='';
+  const k=h('div',{class:'kmap '+(o.size||''),style:`--rows:${R};--cols:${C}`});
+  const corner=h('div',{class:'corner'},`<svg viewBox="0 0 52 40" preserveAspectRatio="none"><line x1="2" y1="2" x2="50" y2="38" stroke="#1b2130" stroke-width="1.5"/></svg><span class="cv">${L.colVars}</span><span class="rv">${L.rowVars}</span>`);
+  k.appendChild(corner);
+  L.cols.forEach((c,i)=>{const e=h('div',{class:'colh',style:`grid-column:${i+2};grid-row:1`},c);k.appendChild(e);});
+  L.rows.forEach((r,i)=>{const e=h('div',{class:'rowh',style:`grid-column:1;grid-row:${i+2}`},r);k.appendChild(e);});
+  const cells=h('div',{class:'cells'});
+  for(let r=0;r<R;r++)for(let c=0;c<C;c++){
+    const m=mAt(L,r,c);const v=vals[m];
+    const cls=['cell'];if(c===C-1)cls.push('lc');if(r===R-1)cls.push('lr');
+    if(o.onClick)cls.push('click');
+    if(o.selected&&o.selected.has(m))cls.push('sel');
+    if(o.highlight&&o.highlight.has(m))cls.push('hl');
+    if(o.nb&&o.nb.has(m))cls.push('nb');
+    const cell=h('div',{class:cls.join(' '),'data-m':m});
+    let inner='';
+    if(o.showM!==false)inner+=`<span class="m">m${m}</span>`;
+    if(v===1)inner+='<span class="v1">1</span>';else if(v===0)inner+='<span class="v0">0</span>';
+    cell.innerHTML=inner;
+    if(o.onClick)cell.addEventListener('click',()=>o.onClick(m));
+    if(o.onHover){cell.addEventListener('mouseenter',()=>o.onHover(m));}
+    cells.appendChild(cell);
+  }
+  const svgNS='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(svgNS,'svg');svg.setAttribute('class','ov');svg.setAttribute('viewBox',`0 0 ${C*100} ${R*100}`);svg.setAttribute('preserveAspectRatio','none');
+  (o.groups||[]).forEach((g,gi)=>{
+    const col=g.color||COLORS[gi%COLORS.length];
+    const inset=7+(g.layer!=null?g.layer:gi)*6;
+    const G=document.createElementNS(svgNS,'g');G.setAttribute('class','grp');
+    const mk=(x,y,w,hh,rot,cx,cy)=>{const r=document.createElementNS(svgNS,'rect');r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',Math.max(w,10));r.setAttribute('height',Math.max(hh,10));r.setAttribute('rx',20);
+      r.setAttribute('fill',col);r.setAttribute('fill-opacity',g.bad?.07:.1);r.setAttribute('stroke',col);r.setAttribute('stroke-width',g.thin?2:3);r.setAttribute('vector-effect','non-scaling-stroke');
+      if(g.dashed)r.setAttribute('stroke-dasharray','7 5');if(rot)r.setAttribute('transform',`rotate(${rot} ${cx} ${cy})`);G.appendChild(r);};
+    if(g.diag){
+      const a=posOf(L,g.diag[0]),b=posOf(L,g.diag[1]);
+      const x1=a.c*100+50,y1=a.r*100+50,x2=b.c*100+50,y2=b.r*100+50;
+      const len=Math.hypot(x2-x1,y2-y1)+70,cx=(x1+x2)/2,cy=(y1+y2)/2,ang=Math.atan2(y2-y1,x2-x1)*180/Math.PI;
+      mk(cx-len/2,cy-26,len,52,ang,cx,cy);
+    }else{
+      const ms=g.cube?cubeMins(g.cube):g.cells;
+      const ps=ms.map(m=>posOf(L,m));
+      const rs=segments(ps.map(p=>p.r),R),cs=segments(ps.map(p=>p.c),C);
+      for(const [r0,r1] of rs)for(const [c0,c1] of cs)mk(c0*100+inset,r0*100+inset,(c1-c0+1)*100-2*inset,(r1-r0+1)*100-2*inset);
+    }
+    svg.appendChild(G);
+  });
+  cells.appendChild(svg);
+  k.appendChild(cells);
+  el.appendChild(k);
+  return k;
+}
+function valuesFrom(n,ones){return Array.from({length:1<<n},(_,m)=>ones.has(m)?1:0);}
+function truthTable(el,n,ones,hl,onHover){
+  let s='<table class="tt"><tr>'+[...VARS.slice(0,n)].map(v=>`<th>${v}</th>`).join('')+'<th>F</th><th></th></tr>';
+  for(let m=0;m<(1<<n);m++){const b=bin(m,n);s+=`<tr data-m="${m}" class="${ones.has(m)?'one':''} ${hl===m?'hl':''}">`+[...b].map(x=>`<td>${x}</td>`).join('')+`<td class="out">${ones.has(m)?1:0}</td><td class="mn">m${m}</td></tr>`;}
+  el.innerHTML=s+'</table>';
+  if(onHover)el.querySelectorAll('tr[data-m]').forEach(tr=>tr.addEventListener('mouseenter',()=>onHover(+tr.dataset.m)));
+}
+function groupExplain(cube){
+  const parts=[];
+  for(let i=0;i<cube.length;i++){
+    if(cube[i]==='-')parts.push(`<span>${VARS[i]} changes → <b>dropped</b></span>`);
+    else if(cube[i]==='1')parts.push(`<span>${VARS[i]} always 1 → <b>${VARS[i]}</b></span>`);
+    else parts.push(`<span>${VARS[i]} always 0 → <b><span class="bar">${VARS[i]}</span></b></span>`);
+  }
+  return parts.join(' · ');
+}
+function groupItems(cubes,n){
+  return cubes.map((c,i)=>{const ms=cubeMins(c);return `<li><span class="chip" style="background:${COLORS[i%COLORS.length]}"></span><div><div><b>Group of ${ms.length}</b> <span class="mono muted">(${ms.map(m=>'m'+m).join(', ')})</span> → <span class="expr" style="font-size:16px">${termHTML(c)}</span></div><div class="vtab">${groupExplain(c)}</div></div></li>`;}).join('');
+}
+
+/* ---------- LEARN ---------- */
+let anN=3,anHL=null;
+function drawAnatomy(){
+  const ones=new Set();
+  renderMap($('#an-map'),{n:anN,values:Array(1<<anN).fill(null),highlight:anHL!=null?new Set([anHL]):null,onHover:m=>{anHL=m;drawAnatomy();},onClick:m=>{anHL=m;drawAnatomy();},size:'lg'});
+  truthTable($('#an-tt'),anN,ones,anHL,m=>{anHL=m;drawAnatomy();});
+  $('#an-tt').querySelectorAll('td.out').forEach(td=>td.textContent='?');
+  const L=layout(anN);
+  if(anHL==null){$('#an-info').innerHTML=`<div class="muted">${anN} variables → 2<sup>${anN}</sup> = <b>${1<<anN} cells</b>, drawn as a ${L.rows.length} × ${L.cols.length} grid.<br><br>Hover a cell or a truth-table row to link them.</div>`;return;}
+  const b=bin(anHL,anN),p=posOf(L,anHL);
+  $('#an-info').innerHTML=`<div class="muted" style="font-size:13px;font-weight:600">CELL m${anHL}</div><div class="big">${mintermHTML(anHL,anN)}</div>
+  <div style="margin-top:8px">${[...b].map((x,i)=>`${VARS[i]} = ${x}`).join(', ')} &nbsp;→&nbsp; binary <span class="mono">${b}</span> = ${anHL}</div>
+  <div class="muted" style="margin-top:6px">Row <span class="mono" style="color:var(--amber)">${L.rowVars} = ${L.rows[p.r]}</span>, column <span class="mono" style="color:var(--accent)">${L.colVars} = ${L.cols[p.c]}</span>. Plain letter for 1, barred letter for 0.</div>`;
+}
+document.querySelectorAll('#an-n button').forEach(b=>b.onclick=()=>{anN=+b.dataset.n;anHL=null;document.querySelectorAll('#an-n button').forEach(x=>x.classList.toggle('on',x===b));drawAnatomy();});
+
+let gcOrder='gray',gcSel=0;
+function drawGray(){
+  const n=3,nb=new Set([0,1,2].map(i=>gcSel^(1<<i)));
+  renderMap($('#gc-map'),{n,order:gcOrder,values:Array(8).fill(null),highlight:new Set([gcSel]),nb,onClick:m=>{gcSel=m;drawGray();},size:'lg'});
+  const L=layout(n,gcOrder),p=posOf(L,gcSel);
+  const adj=new Set();const R=L.rows.length,C=L.cols.length;
+  [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dr,dc])=>{const r=(p.r+dr+R)%R,c=(p.c+dc+C)%C;adj.add(mAt(L,r,c));});
+  const bad=[...nb].filter(m=>!adj.has(m)),fake=[...adj].filter(m=>!nb.has(m)&&m!==gcSel);
+  let s=`<div class="muted" style="font-size:13px;font-weight:600">SELECTED m${gcSel} = ${bin(gcSel,3)}</div><div style="margin:6px 0">True neighbours (one bit different): ${[...nb].sort((a,b)=>a-b).map(m=>`<span class="mono">m${m} (${bin(m,3)})</span>`).join(', ')}</div>`;
+  if(!bad.length&&!fake.length)s+=`<div class="msg good">Every true neighbour is physically next to m${gcSel} (wrap-around counts). Grouping will work.</div>`;
+  else s+=`<div class="msg bad">${bad.length?`True neighbour ${bad.map(m=>'m'+m).join(', ')} is <b>not</b> next to m${gcSel}. `:''}${fake.length?`${fake.map(m=>'m'+m).join(', ')} sits next to it but differs by 2 bits. `:''}Groups drawn on this map would give wrong answers.</div>`;
+  $('#gc-info').innerHTML=s;
+}
+document.querySelectorAll('#gc-order button').forEach(b=>b.onclick=()=>{gcOrder=b.dataset.o;document.querySelectorAll('#gc-order button').forEach(x=>x.classList.toggle('on',x===b));drawGray();});
+
+/* ---------- RULES ---------- */
+const RED='#b91c1c',GRN='#15803d';
+const RULES=[
+ {t:'No zeros allowed',d:'A group may contain only 1s.',n:2,ones:[1,3],
+  w:{g:[{cells:[0,1]}],c:'Group includes a 0'},r:{g:[{cube:'-1'}],c:'F = B'}},
+ {t:'No diagonals',d:'Groups are horizontal or vertical rectangles only.',n:2,ones:[1,2],
+  w:{g:[{diag:[1,2]}],c:'Diagonal group'},r:{g:[{cube:'01'},{cube:'10'}],c:"F = A'B + AB'"}},
+ {t:'Power of 2 cells only',d:'A group holds 1, 2, 4 or 8 cells (2ⁿ).',n:3,ones:[1,3,2],
+  w:{g:[{cells:[1,3,2]}],c:'Group of 3'},r:{g:[{cube:'0-1'},{cube:'01-'}],c:"F = A'C + A'B"}},
+ {t:'Groups as large as possible',d:'Prefer one group of 4 over two groups of 2.',n:3,ones:[0,1,4,5],
+  w:{g:[{cube:'00-'},{cube:'10-'}],c:"Two pairs: A'B' + AB'"},r:{g:[{cube:'-0-'}],c:"One quad: F = B'"}},
+ {t:'Every 1 in at least one group',d:'No 1 may be left uncircled.',n:2,ones:[0,1,3],
+  w:{g:[{cube:'0-'}],c:'m3 left out'},r:{g:[{cube:'0-'},{cube:'-1'}],c:"F = A' + B"}},
+ {t:'Overlapping allowed',d:'A 1 may belong to several groups if that makes a group bigger.',n:3,ones:[4,5,6,7,3],
+  w:{g:[{cube:'1--'},{cube:'011'}],c:"Avoiding overlap: A + A'BC"},r:{g:[{cube:'1--'},{cube:'-11'}],c:'Overlap m7: F = A + BC'}},
+ {t:'Wrap-around allowed',d:'Left and right edges are neighbours (the map is a cylinder).',n:3,ones:[0,2],
+  w:{g:[{cube:'000'},{cube:'010'}],c:"Two singles: A'B'C' + A'BC'"},r:{g:[{cube:'0-0'}],c:"Wrap pair: F = A'C'"}},
+ {t:'Fewest groups possible',d:'Drop any group whose 1s are all covered by other groups.',n:3,ones:[0,1,5,7],
+  w:{g:[{cube:'00-'},{cube:'-01'},{cube:'1-1'}],c:"Redundant middle group B'C"},r:{g:[{cube:'00-'},{cube:'1-1'}],c:"F = A'B' + AC"}},
+];
+function drawRules(){
+  const box=$('#rules');box.innerHTML='';
+  RULES.forEach((R,i)=>{
+    const card=h('div',{class:'card rule'},`<h3><span class="num">${i+1}</span>${R.t}</h3><div class="muted">${R.d}</div>`);
+    const pair=h('div',{class:'pair'});
+    [['w',RED,'✗ Wrong'],['r',GRN,'✓ Right']].forEach(([key,col,lab])=>{
+      const f=h('figure');const m=h('div');f.appendChild(m);
+      const gs=R[key].g.map((g,gi)=>Object.assign({color:key==='w'?(gi===0||R[key].g.length===1?RED:'#9a3412'):[GRN,'#0f766e','#2563eb'][gi],dashed:key==='w',bad:key==='w'},g));
+      if(key==='w'&&i===7){gs[0].color='#78716c';gs[2].color='#78716c';gs[1].color=RED;gs[0].dashed=gs[2].dashed=false;}
+      if(key==='w'&&i===5){gs[0].color='#78716c';gs[0].dashed=false;}
+      if(key==='w'&&i===4){gs[0].color='#78716c';gs[0].dashed=false;}
+      if(key==='w'&&(i===3||i===6)){gs.forEach(g=>g.color=RED);}
+      renderMap(m,{n:R.n,values:valuesFrom(R.n,new Set(R.ones)),groups:gs,size:'sm',showM:false});
+      f.appendChild(h('figcaption',{class:key},`${lab}<span>${R[key].c}</span>`));
+      pair.appendChild(f);
+    });
+    card.appendChild(pair);box.appendChild(card);
+  });
+}
+
+/* ---------- EXAMPLES ---------- */
+const EX=[
+ {tag:'Example 01',n:2,title:"F(A, B) = AB' + AB",terms:["AB'","AB"],ones:[2,3],groups:['1-'],note:"Algebra check: AB' + AB = A(B' + B) = A · 1 = A."},
+ {tag:'Example 02',n:2,title:"F(A, B) = A'B' + AB' + A'B",terms:["A'B'","AB'","A'B"],ones:[0,2,1],groups:['0-','-0'],note:'m0 sits in both groups. Overlap is allowed and keeps each group as big as possible. The result is the NAND function.'},
+ {tag:'Example 03',n:3,title:"F(A, B, C) = A'B'C' + A'B'C",terms:["A'B'C'","A'B'C"],ones:[0,1],groups:['00-'],note:'The slide heading says F(A, B), but the expression uses three variables.'},
+ {tag:'Example 04',n:3,title:"F(A, B, C) = A'B'C' + A'B'C + A'BC + A'BC'",terms:["A'B'C'","A'B'C","A'BC","A'BC'"],ones:[0,1,3,2],groups:['0--'],note:"The slide prints the first term as A'B'C (a repeat); its map shows it is A'B'C'."},
+ {tag:'Example 05',n:3,title:"F(A, B, C) = A'B'C + A'BC + AB'C + ABC",terms:["A'B'C","A'BC","AB'C","ABC"],ones:[1,3,5,7],groups:['--1'],note:'A group of 4 removes two variables, leaving a single letter.'},
+ {tag:'Extra A',n:3,title:'F = Σm(0, 2, 4, 6) — wrap-around',terms:null,ones:[0,2,4,6],groups:['--0'],note:'The two outer columns are neighbours, so the four corner cells form one group of 4.'},
+ {tag:'Extra B',n:3,title:'F = Σm(1, 3, 4, 6, 7) — slide 9 truth table',terms:null,ones:[1,3,4,6,7],groups:['0-1','1-0','-11'],note:"m7 could pair with m6 instead (giving AB). Both answers are minimal: a K-map can have more than one correct answer."},
+];
+let exI=0,exS=0;
+function exSteps(E){
+  const st=[];
+  // step 0: minterms
+  let s0=`<p>First find which cells get a 1.</p>`;
+  if(E.terms){s0+=`<table class="conv"><tr><th>Term</th><th>Binary</th><th>Cell</th></tr>`+E.terms.map((t,i)=>{const m=E.ones[i];return `<tr><td>${mintermHTML(m,E.n)}</td><td>${bin(m,E.n)}</td><td>m${m}</td></tr>`;}).join('')+`</table><p class="muted">Plain letter → 1, barred letter → 0.</p>`;}
+  else s0+=`<p>The minterm list tells us directly: F = 1 in cells ${E.ones.map(m=>'m'+m).join(', ')}.</p>`;
+  st.push({html:s0,ones:[],groups:[]});
+  st.push({html:`<p>Place a <b>1</b> in each of those cells and 0 everywhere else.</p><p class="muted">${E.n===3?'Remember the column order is 00, 01, 11, 10.':'This map has 2² = 4 cells.'}</p>`,ones:E.ones,groups:[]});
+  E.groups.forEach((g,i)=>{
+    const ms=cubeMins(g);
+    st.push({html:`<p><b>Group ${i+1}</b>: circle ${ms.map(m=>'m'+m).join(', ')} (${ms.length} cells).</p><div class="vtab">${groupExplain(g)}</div><p>Term: <span class="expr">${termHTML(g)}</span></p>`,ones:E.ones,groups:E.groups.slice(0,i+1)});
+  });
+  st.push({html:`<p>OR the terms together:</p><div class="expr" style="font-size:26px;margin:6px 0 10px">F = ${E.groups.map(termHTML).join(' + ')}</div><p class="muted">${E.note}</p>`,ones:E.ones,groups:E.groups});
+  return st;
+}
+function drawEx(){
+  const E=EX[exI],st=exSteps(E),S=st[exS];
+  document.querySelectorAll('#exlist button').forEach((b,i)=>b.classList.toggle('on',i===exI));
+  $('#ex-tag').textContent=E.tag;
+  $('#ex-title').innerHTML=E.title.replace(/([A-D])'/g,'<span class="bar">$1</span>');
+  $('#ex-step').innerHTML=`<div class="muted" style="font-size:13px;font-weight:600">STEP ${exS+1} OF ${st.length}</div>`+S.html;
+  const vals=Array.from({length:1<<E.n},(_,m)=>exS===0?null:(S.ones.includes(m)?1:0));
+  renderMap($('#ex-map'),{n:E.n,values:vals,groups:S.groups.map(c=>({cube:c})),size:'lg',highlight:exS===0?new Set(E.ones):null});
+  $('#ex-prev').disabled=exS===0;
+  $('#ex-next').textContent=exS===st.length-1?(exI<EX.length-1?'Next example →':'Start again ↺'):'Next step →';
+  $('#ex-dots').innerHTML=st.map((_,i)=>`<i class="${i<=exS?'on':''}"></i>`).join('');
+}
+$('#ex-prev').onclick=()=>{if(exS>0){exS--;drawEx();}};
+$('#ex-next').onclick=()=>{const n=exSteps(EX[exI]).length;if(exS<n-1)exS++;else{exI=(exI+1)%EX.length;exS=0;}drawEx();};
+EX.forEach((E,i)=>{const b=h('button',{},E.tag);b.onclick=()=>{exI=i;exS=0;drawEx();};$('#exlist').appendChild(b);});
+
+/* ---------- PLAYGROUND ---------- */
+let pgN=3,pgOnes=new Set([1,3,4,6,7]);
+function setPgN(n){pgN=n;document.querySelectorAll('#pg-n button').forEach(x=>x.classList.toggle('on',+x.dataset.n===n));}
+function drawPg(){
+  const cubes=solve(pgN,pgOnes);
+  renderMap($('#pg-map'),{n:pgN,values:valuesFrom(pgN,pgOnes),groups:cubes.map(c=>({cube:c})),onClick:m=>{pgOnes.has(m)?pgOnes.delete(m):pgOnes.add(m);drawPg();},size:pgN===4?'':'lg'});
+  $('#pg-ans').innerHTML='F = '+exprHTML(cubes);
+  $('#pg-groups').innerHTML=pgOnes.size===0?'<li class="muted">No 1s yet: F = 0. Click cells to add 1s.</li>':pgOnes.size===(1<<pgN)?'<li>All cells are 1: one group of '+(1<<pgN)+' → F = 1.</li>':groupItems(cubes,pgN);
+  truthTable($('#pg-tt'),pgN,pgOnes,null);
+}
+document.querySelectorAll('#pg-n button').forEach(b=>b.onclick=()=>{const n=+b.dataset.n;pgOnes=new Set([...pgOnes].filter(m=>m<(1<<n)));setPgN(n);$('#pg-msg').textContent='';$('#pg-msg').className='msg';drawPg();});
+$('#pg-clear').onclick=()=>{pgOnes=new Set();$('#pg-in').value='';drawPg();};
+$('#pg-rand').onclick=()=>{pgOnes=randOnes(pgN);$('#pg-in').value='';drawPg();};
+$('#pg-form').addEventListener('submit',e=>{e.preventDefault();const msg=$('#pg-msg');
+  try{const r=parseInput($('#pg-in').value,2);setPgN(r.n);pgOnes=r.ones;msg.className='msg good';msg.textContent=`Loaded ${r.n}-variable function: Σm(${[...r.ones].sort((a,b)=>a-b).join(', ')||'–'}).`;drawPg();}
+  catch(err){msg.className='msg bad';msg.textContent=err.message;}});
+function randOnes(n){const N=1<<n;const lo=n===2?1:n===3?2:4,hi=n===2?3:n===3?6:10;let s;
+  let tries=0;do{s=new Set();const k=lo+Math.floor(Math.random()*(hi-lo+1));while(s.size<k)s.add(Math.floor(Math.random()*N));tries++;}while(tries<200&&!solve(n,s).some(c=>lits(c)<n));return s;}
+
+/* ---------- PRACTICE ---------- */
+let pr={n:3,ones:new Set(),sel:new Set(),groups:[],done:false},streak=0;
+function prNew(){pr={n:pr.n,ones:randOnes(pr.n),sel:new Set(),groups:[],done:false};
+  ['#pr-gmsg','#pr-msg','#pr-tmsg'].forEach(s=>{$(s).textContent='';$(s).className='msg';});$('#pr-in').value='';drawPr();}
+function drawPr(){
+  const ms=[...pr.ones].sort((a,b)=>a-b);
+  $('#pr-q').innerHTML=`F(${VARS.slice(0,pr.n).split('').join(', ')}) = Σm(${ms.join(', ')})`;
+  renderMap($('#pr-map'),{n:pr.n,values:valuesFrom(pr.n,pr.ones),groups:pr.groups.map(c=>({cube:c})),selected:pr.sel,onClick:m=>{if(pr.done)return;pr.sel.has(m)?pr.sel.delete(m):pr.sel.add(m);drawPr();},size:pr.n===4?'':'lg'});
+  $('#pr-groups').innerHTML=pr.groups.length?groupItems(pr.groups,pr.n):'<li class="muted">No groups yet. Tap the cells of your first group.</li>';
+  $('#pr-yours').innerHTML=pr.groups.length?'F = '+pr.groups.map(termHTML).join(' + '):'—';
+  $('#pr-streak').textContent=streak?`Streak: ${streak} 🔥`:'';
+}
+function popcount(x){let c=0;while(x){c+=x&1;x>>=1;}return c;}
+function checkGroup(sel,ones,n){
+  const a=[...sel];
+  if(!a.length)return {ok:false,msg:'Select the cells of a group first (tap them).'};
+  if(a.some(m=>!ones.has(m)))return {ok:false,msg:'Rule 1 – No zeros: your selection includes a 0 cell.'};
+  if(a.length&(a.length-1))return {ok:false,msg:`Rule 3 – Power of 2: a group must have 1, 2, 4 or 8 cells, not ${a.length}.`};
+  const and=a.reduce((x,y)=>x&y),or=a.reduce((x,y)=>x|y),vary=and^or;
+  if((1<<popcount(vary))!==a.length)return {ok:false,msg:'Rule 2 – These cells do not form a rectangle of neighbours (no diagonals; edges wrap around).'};
+  let c='';for(let i=0;i<n;i++){const bit=1<<(n-1-i);c+=(vary&bit)?'-':((and&bit)?'1':'0');}
+  return {ok:true,cube:c};
+}
+$('#pr-add').onclick=()=>{const r=checkGroup(pr.sel,pr.ones,pr.n),m=$('#pr-gmsg');
+  if(!r.ok){m.className='msg bad';m.textContent=r.msg;return;}
+  if(pr.groups.includes(r.cube)){m.className='msg bad';m.textContent='You already have that group.';return;}
+  pr.groups.push(r.cube);pr.sel=new Set();
+  const big=implicants(pr.n,pr.ones).find(d=>d!==r.cube&&contains(d,r.cube));
+  m.className=big?'msg info':'msg good';
+  m.innerHTML=big?`Valid group → ${termHTML(r.cube)}. Hint (rule 4): it could be bigger.`:`Valid group → ${termHTML(r.cube)}`;
+  drawPr();};
+$('#pr-clearsel').onclick=()=>{pr.sel=new Set();drawPr();};
+$('#pr-undo').onclick=()=>{pr.groups.pop();$('#pr-gmsg').textContent='';$('#pr-gmsg').className='msg';drawPr();};
+$('#pr-check').onclick=()=>{
+  const m=$('#pr-msg'),G=pr.groups,cov=new Set();G.forEach(c=>cubeMins(c).forEach(x=>cov.add(x)));
+  const miss=[...pr.ones].filter(x=>!cov.has(x));
+  if(!G.length){m.className='msg bad';m.textContent='Add at least one group first.';return;}
+  if(miss.length){m.className='msg bad';m.textContent=`Rule 5 – Every 1 must be covered: ${miss.map(x=>'m'+x).join(', ')} not grouped yet.`;return;}
+  const imps=implicants(pr.n,pr.ones);
+  const small=G.filter(c=>imps.some(d=>d!==c&&contains(d,c)));
+  const red=G.filter(c=>cubeMins(c).every(x=>G.some(o=>o!==c&&matches(o,x))));
+  const best=solve(pr.n,pr.ones),bl=best.reduce((a,c)=>a+lits(c),0),yl=G.reduce((a,c)=>a+lits(c),0);
+  if(!small.length&&!red.length&&G.length===best.length&&yl===bl){streak++;m.className='msg good';m.innerHTML=`Correct and minimal! F = ${exprHTML(G)}. Press <b>New problem</b> for another.`;pr.done=true;drawPr();return;}
+  streak=0;
+  const tips=[];
+  if(small.length)tips.push(`Rule 4 – ${small.map(termHTML).join(', ')} can be made bigger.`);
+  if(red.length)tips.push(`Rule 8 – ${red.map(termHTML).join(', ')} is redundant (all its 1s are already covered).`);
+  if(!tips.length)tips.push(`Your answer is correct but not minimal: it can be done with ${best.length} group${best.length>1?'s':''} and ${bl} letters.`);
+  m.className='msg info';m.innerHTML='Your groups cover every 1, so the expression is equivalent — but it is not the simplest yet.<br>'+tips.join('<br>');drawPr();
+};
+$('#pr-show').onclick=()=>{pr.groups=solve(pr.n,pr.ones);pr.sel=new Set();pr.done=true;streak=0;
+  const m=$('#pr-msg');m.className='msg info';m.innerHTML=`Solution: F = ${exprHTML(pr.groups)}. Try a new problem.`;drawPr();};
+$('#pr-form').addEventListener('submit',e=>{e.preventDefault();const m=$('#pr-tmsg');
+  try{const r=parseInput($('#pr-in').value,pr.n);
+    if(r.n>pr.n)throw new Error(`This problem only uses ${VARS.slice(0,pr.n).split('').join(', ')}.`);
+    const same=[...Array(1<<pr.n).keys()].every(x=>r.ones.has(x)===pr.ones.has(x));
+    if(!same){m.className='msg bad';m.textContent='Not equivalent: your expression gives a different truth table. Check your groups.';streak=0;drawPr();return;}
+    const best=solve(pr.n,pr.ones),bl=best.reduce((a,c)=>a+lits(c),0);
+    const terms=$('#pr-in').value.split('+').length,letters=($('#pr-in').value.toUpperCase().match(/[A-D]/g)||[]).length;
+    if(terms<=best.length&&letters<=bl){streak++;m.className='msg good';m.innerHTML='Correct and minimal!';}
+    else{m.className='msg info';m.innerHTML=`Equivalent, but not minimal. The simplest form has ${best.length} term${best.length>1?'s':''} and ${bl} letters.`;}
+    drawPr();
+  }catch(err){m.className='msg bad';m.textContent=err.message;}});
+document.querySelectorAll('#pr-lvl button').forEach(b=>b.onclick=()=>{pr.n=+b.dataset.n;document.querySelectorAll('#pr-lvl button').forEach(x=>x.classList.toggle('on',x===b));prNew();});
+$('#pr-new').onclick=prNew;
+
+/* ---------- QUIZ ---------- */
+const QZ=[
+ {q:'How many cells does a 3-variable K-map have?',o:['3','6','8','9'],a:2,e:'2³ = 8 cells, drawn as a 2 × 4 grid.'},
+ {q:'Why are K-maps used instead of Boolean algebra alone?',o:['They give a pictorial, systematic way to find the simplest expression','They work only for 2 variables','They replace truth tables completely','They make circuits faster to run'],a:0,e:'Boolean algebra simplification can be awkward; the K-map groups common factors visually.'},
+ {q:'What is the correct column order for BC in a 3-variable map?',o:['00, 01, 10, 11','00, 01, 11, 10','00, 10, 01, 11','11, 10, 01, 00'],a:1,e:'Gray code: only one bit changes between neighbours, including from 10 back to 00.'},
+ {q:'Which group size is NOT allowed?',o:['2','4','6','8'],a:2,e:'Groups must be a power of 2: 1, 2, 4, 8 …'},
+ {q:'Simplify the function on this map.',map:{n:2,ones:[2,3]},o:['B',"A'",'A','AB'],a:2,e:'The bottom row (A = 1) is one group; B changes and is dropped → F = A.'},
+ {q:'In a 3-variable map, a group of 4 cells gives a term with how many letters?',o:['1','2','3','4'],a:0,e:'A group of 2ᵏ cells removes k variables: 3 − 2 = 1 letter.'},
+ {q:'Cells m0 and m2 in a 3-variable map can be grouped because of …',o:['Overlapping','Wrap-around','Diagonal grouping','Don’t-care conditions'],a:1,e:'Columns 00 and 10 are on opposite edges but differ by one bit, so they are neighbours.'},
+ {q:'Inside a group, variable B is 0 in every cell. In the term it appears as …',o:['B',"B' (B with a bar)",'It is dropped','B + B\''],a:1,e:'Always 0 → complemented. Always 1 → plain. Changes → dropped.'},
+ {q:'Simplify the function on this map.',map:{n:3,ones:[1,3,5,7]},o:['C','A\'C','BC','A + C'],a:0,e:'The middle square is a group of 4 where only C stays the same (C = 1).'},
+ {q:"Which minterm is AB'C?",o:['m3','m5','m6','m4'],a:1,e:"A=1, B=0, C=1 → 101 = 5."},
+ {q:"Simplify F(A, B) = A'B' + AB' + A'B.",o:["A'B'","A' + B'","A + B","AB"],a:1,e:'Two overlapping pairs: the top row gives A\', the left column gives B\'.'},
+ {q:'Simplify the function on this map.',map:{n:3,ones:[0,2,4,6]},o:["A'C'","C'","B'C'","A + C'"],a:1,e:'The four corners form one wrap-around group; only C stays the same (C = 0) → C\'.'},
+ {q:'Rule "fewest groups possible" means you should …',o:['Never let groups overlap','Remove any group whose 1s are already covered by other groups','Use only groups of 4','Leave single 1s out'],a:1,e:'Make each group as big as possible first, then drop redundant groups.'},
+ {q:'Simplify F = Σm(1, 3, 4, 6, 7) (A, B, C).',map:{n:3,ones:[1,3,4,6,7]},o:["A'C + AC' + BC","A + C","A'C + AC'","AB + BC"],a:0,e:"A'C (m1,m3), AC' (m4,m6 wrap) and BC (m3,m7). A'C + AC' + AB is also minimal."},
+];
+let qi=0,qs=0,qAns=false;
+function drawQuiz(){
+  const box=$('#quiz');
+  if(qi>=QZ.length){box.innerHTML=`<div class="progress"><i style="width:100%"></i></div><div class="muted">Your score</div><div class="score">${qs} / ${QZ.length}</div><p>${qs===QZ.length?'Perfect! You have mastered K-maps.':qs>=10?'Great work. Review the questions you missed in the Rules and Examples tabs.':'Go back over the Rules and Examples tabs, then try again.'}</p><button class="primary" id="qz-re">Try again</button>`;$('#qz-re').onclick=()=>{qi=0;qs=0;drawQuiz();};return;}
+  const Q=QZ[qi];qAns=false;
+  box.innerHTML=`<div class="progress"><i style="width:${qi/QZ.length*100}%"></i></div><div class="muted" style="font-size:13px;font-weight:600">QUESTION ${qi+1} OF ${QZ.length} · SCORE ${qs}</div><div class="q">${Q.q}</div><div id="qz-map" style="margin-bottom:14px"></div><div class="opts" id="qz-o"></div><div class="msg" id="qz-m"></div><div style="margin-top:12px"><button class="primary" id="qz-n" style="display:none">Next →</button></div>`;
+  if(Q.map)renderMap($('#qz-map'),{n:Q.map.n,values:valuesFrom(Q.map.n,new Set(Q.map.ones)),showM:false});
+  const fmt=t=>t.replace(/([A-D])'/g,'<span class="bar">$1</span>');
+  Q.o.forEach((t,i)=>{const b=h('button',{},fmt(t));b.onclick=()=>{if(qAns)return;qAns=true;
+    const ok=i===Q.a;if(ok)qs++;b.classList.add(ok?'right':'wrong');$('#qz-o').children[Q.a].classList.add('right');
+    const m=$('#qz-m');m.className='msg '+(ok?'good':'bad');m.innerHTML=(ok?'Correct. ':'Not quite. ')+fmt(Q.e);
+    if(Q.map)renderMap($('#qz-map'),{n:Q.map.n,values:valuesFrom(Q.map.n,new Set(Q.map.ones)),groups:solve(Q.map.n,new Set(Q.map.ones)).map(c=>({cube:c})),showM:false});
+    $('#qz-n').style.display='';};$('#qz-o').appendChild(b);});
+  $('#qz-n').onclick=()=>{qi++;drawQuiz();};
+}
+
+/* ---------- routing ---------- */
+const VIEWS=['learn','rules','examples','playground','practice','quiz'];
+function route(){const v=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'learn';
+  VIEWS.forEach(x=>{$('#v-'+x).classList.toggle('on',x===v);});
+  document.querySelectorAll('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));}
+window.addEventListener('hashchange',()=>{route();window.scrollTo(0,0);});
+
+drawAnatomy();drawGray();drawRules();drawEx();drawPg();prNew();drawQuiz();route();
+</script>
+</body>
+</html>
